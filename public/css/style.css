@@ -1,0 +1,145 @@
+/* Make body a flex container */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+}
+/* Ensure .container (main content) expands to fill space */
+.container {
+    flex: 1;
+    padding: 20px;
+}
+
+.navbar{
+    height: 5rem;
+    background-color: white;
+}
+.fa-compass{
+    font-size: 2rem;
+    color: rgb(255, 82, 82);
+}
+.nav-link{
+    color: #222222 !important;
+}
+.f-info-links a{
+    text-decoration: none;
+     color: #222222 !important;
+}
+.f-info-links a:hover{
+    text-decoration:underline;
+}
+
+.f-info-links,
+.f-info-socials,
+.f-info-brand{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.f-info-socials{
+    font-size: 1.2rem;
+    margin-right: 2rem;
+}
+.f-info-socials i {
+    margin-right: 1rem;
+}
+.f-info{
+    background-color: rgb(236, 236, 236);
+}
+.card{
+    border: none !important;
+    margin-bottom: 1rem;
+}
+.card-img-top{
+    border-radius: 1rem !important;
+    width: 100% !important;
+    object-fit: cover !important;
+}
+.card-body{
+    padding: 0 !important;
+}
+.card-text p{
+    font-weight: 400;
+}
+.listing-link{
+    text-decoration: none !important;
+}
+.card-img-overlay{
+    opacity: 0;
+}
+.card-img-overlay:hover{
+    opacity: 0.2;
+    background-color: white;
+}
+.add-btn{
+    background-color:rgb(255, 82, 82) !important ;
+    border: none !important;
+}
+.card {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.card-title {
+  font-weight: bold;
+  color: #333;
+}
+
+.card-text {
+  color: #666;
+}
+/* Style for the reviews section heading */
+h3.reviews-heading {
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0.5rem;
+}
+
+/* Container for all review cards */
+.reviews-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem; /* Space between the cards */
+}
+
+/* Individual review card styling (customized from your existing .card) */
+.review-card {
+    /* The col-5 and ms-3 classes from Bootstrap already handle the width and margin */
+    /* Add a bit of padding inside the card */
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    width: 48%; /* A little less than 50% to account for gap */
+}
+
+/* Style for the review's author/title */
+.review-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #444;
+}
+
+/* Style for the review's rating */
+.review-rating {
+    font-size: 0.9rem;
+    color: #777;
+    margin-top: 0.25rem;
+}
+
+/* Style for the review's comment text */
+.review-comment {
+    font-size: 1rem;
+    color: #333;
+    margin-top: 0.5rem;
+}
+
+/* Star rating styling (if you add star icons later) */
+.stars {
+    color: #ffc107; /* A nice yellow for stars */
+}
