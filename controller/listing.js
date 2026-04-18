@@ -1,29 +1,65 @@
-const Listing = require('../models/listing.js');
+const Listing = require("../models/listing");
+const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
+const mapToken = process.env.MAP_TOKEN;
+const geocodingClient = mbxGeocoding({ accessToken: mapToken });
 
-
-module.exports.homeRoute = async (req, res, next)=>{
-    
-    let allListing = await  Listing.find()
-
-    res.render('./listing/home.ejs', {allListing});
+module.exports.index = async (req, res) => {
+    const allListings = await Listing.find({});
+    res.render("listings/index.ejs", { allListings });
 };
 
-module.exports.newListingForm =(req, res)=>{
-    res.render('./listing/new.ejs');
+module.exports.renderNewForm = (req, res) => {
+    res.render("listings/new.ejs");
+};
+module.exports.showListing = async (req, res) => {
+    let { id } = req.params;
+    const listing = await Listing.findById(id)
+        .populate({
+            path: "reviews",
+            populate: {
+                path: "author",
+            }
+        });
+    res.render("listings/show.ejs", { listing });
 };
 
-module.exports.createNewListing = async (req,res)=>{
-    let url = req.file.path;
-    let filename = req.file.filename;
+module.exports.createListing = async (req, res, next) => {
+    try {
+        // Get coordinates from Mapbox Geocoding API
+        const geoData = await geocodingClient
+            .forwardGeocode({
+                query: req.body.listing.location,
+                limit: 1
+            })
+            .send();
 
-    const newlisting = new Listing(req.body.listing);
+        // Extract geometry (lat/lng)
+        const geometry = geoData.body.features[0].geometry;
+        console.log("Geometry:", geometry);
 
-    newlisting.owner = req.user._id;
-    newlisting.image ={url,filename};
-    await newlisting.save();
-    req.flash("success","Successfully created the listing");
-    res.redirect('/listing');
+        // Extract image data from multer upload
+        let url = req.file.path;
+        let filename = req.file.filename;
+
+        // Create new listing
+        const newListing = new Listing(req.body.listing);
+        newListing.owner = req.user._id;
+        newListing.image = { url, filename };
+        newListing.geometry = geometry; // Save coordinates to MongoDB
+
+        // Save to database
+        await newListing.save();
+
+        // Flash success and redirect
+        req.flash("success", "New Listing Created!");
+        res.redirect(`/listings/${newListing._id}`);
+    } catch (err) {
+        console.error(err);
+        req.flash("error", "Something went wrong while creating the listing.");
+        res.redirect("/listings");
+    }
 };
+
 
 module.exports.editListing = async (req, res)=>{
     let {id} = req.params;
@@ -70,3 +106,39 @@ module.exports.showListing = async(req, res)=>{
     }
     res.render('./listing/show.ejs', {currListing});
 }
+module.exports.createListing = async (req, res, next) => {
+    try {
+        // Get coordinates from Mapbox Geocoding API
+        const geoData = await geocodingClient
+            .forwardGeocode({
+                query: req.body.listing.location, // from form input
+                limit: 1
+            })
+            .send();
+
+        // Extract geometry (lat/lng)
+        const geometry = geoData.body.features[0].geometry;
+        console.log("Geometry:", geometry);
+
+        // Extract image data from multer upload
+        let url = req.file.path;
+        let filename = req.file.filename;
+
+        // Create new listing
+        const newListing = new Listing(req.body.listing);
+        newListing.owner = req.user._id;
+        newListing.image = { url, filename };
+        newListing.geometry = geometry; // Save coordinates to MongoDB
+
+        // Save to database
+        await newListing.save();
+
+        // Flash success and redirect
+        req.flash("success", "New Listing Created!");
+        res.redirect(`/listings/${newListing._id}`);
+    } catch (err) {
+        console.error(err);
+        req.flash("error", "Something went wrong while creating the listing.");
+        res.redirect("/listings");
+    }
+};

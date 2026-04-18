@@ -48,7 +48,7 @@ body {
 .f-info{
     background-color: rgb(236, 236, 236);
 }
-.card{
+.listing-card{
     border: none !important;
     margin-bottom: 1rem;
 }

@@ -1,32 +1,27 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose"); // Import mongoose once
-// mongoose.connect("mongodb://127.0.0.1:27017/wanderlust");
+mongoose.connect("mongodb://127.0.0.1:27017/wanderlust");
 const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
+// const dbUrl = process.env.ATLASDB_URL;
 const PORT = 8020;
-const Listing= require("./models/listing.js");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");// Without ejs-mate, you have to manually
 //  include headers, footers, and scripts in every file using <%- include() %>,
 //  leading to repetitive code.
 
-const wrapAsync = require("./utils/wrapAsync.js");
+const session = require("express-session");
+const MongoStore = require("connect-mongo");
+
+const flash = require("connect-flash");
+// const passport = require('passport');
+
 const ExpressError = require("./utils/ExpressError.js");
-const {listingSchema,reviewSchema} =require("./schema.js");
 const { error } = require("console");
-
-const Review = require("./models/review.js");
-// Connect to MongoDB
-async function main() {
-    await mongoose.connect(MONGO_URL);
-}
-
-main().then(()=>{
-    console.log("Connected to DB");
-}).catch(err => {
-    console.error("Failed to connect to DB:", err);
-});
+const listings = require("./routes/listing.js");
+const reviews = require("./routes/review.js");
 
 app.use(express.static(path.join(__dirname,"public")));// to use static files such as css,js in public folder
 
@@ -38,148 +33,42 @@ app.engine("ejs",ejsMate);
 // Set the views directory
 app.set("views", path.join(__dirname, "views"));
 
-
-
 // Basic route
 app.get("/", (req, res) => {
     res.send("This is the root");
 });
 
-//Index route
-app.get("/listings", wrapAsync(async (req,res)=>{
-    const allListings = await Listing.find({});
-    res.render("listings/index",{allListings});
-}));
+const store = MongoStore.create({
+    mongoUrl: MONGO_URL,
+    crypto: {
+        secret: "mysupersecret",
+    },
+    touchAfter: 24 * 3600,
+});
 
-const validateListing =(req,res,next) =>{
-    let {error} = listingSchema.validate(req.body);
-
-        if(error){
-            throw new ExpressError(400,error);
-        }
-        else{
-            next();
-        }
+const sessionOptions = {
+    store,
+    secret: "mysupersecret",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+    },
 };
 
-const validatereview =(req,res,next) =>{
-    let {error} = reviewSchema.validate(req.body);
 
-        if(error){
-            throw new ExpressError(400,error);
-        }
-        else{
-            next();
-        }
-};
-// New Route
-app.get("/listings/new", wrapAsync((req, res) => {
-    res.render("listings/new"); // Remove the leading slash
-}));
-// In your POST route
-app.post("/listings", validateListing, wrapAsync(async (req, res) => {
-    const newListing = new Listing(req.body.listing);
+app.use(session(sessionOptions));//middleware
+app.use(flash());
 
-    // If no image is provided, set default values
-    if (!newListing.image || !newListing.image.url) {
-        newListing.image = {
-            filename: "default",
-            url: "/images/default.png"
-        };
-    }
+app.use((req,res,next) => {
+    res.locals.success = req.flash("success");
+    next();
+});
 
-    await newListing.save();
-    res.redirect("/listings");
-}));
-
-// show route
-app.get("/listings/:id",wrapAsync( async (req,res,next) => {
-    let {id} = req.params;
-    const listing = await Listing.findById(id).populate("reviews");
-    res.render("listings/show", {listing});  //
-}));
-
-// Edit route
-app.get("/listings/:id/edit",wrapAsync(async (req,res,next) =>{
-    let {id} = req.params;
-    const listing = await Listing.findById(id);
-    res.render("listings/edit.ejs",{listing});
-}));
-
-// update route
-// app.put("/listings/:id",
-//     validateListing,
-//     wrapAsync(async (req, res) => {
-//     let { id } = req.params;
-//     await Listing.findByIdAndUpdate(id, {...req.body.listing});
-//     res.redirect("/listings");
-// }));
-app.put("/listings/:id",
-    wrapAsync(async (req, res) => {
-        const { id } = req.params;
-        let updateData = {};
-
-        // Handle image data
-        if (req.body.image) {
-            updateData.image = {
-                filename: "listingimage",
-                url: req.body.image
-            };
-        }
-
-        // Handle other listing data
-        if (req.body.listing) {
-            updateData = { ...updateData, ...req.body.listing };
-        }
-
-        const updatedListing = await Listing.findByIdAndUpdate(
-            id,
-            updateData,
-            { new: true } // Return the updated document
-        );
-
-        res.redirect(`/listings/${id}`);
-    })
-);
-
-//post review route
-app.post("/listings/:id/reviews", validatereview, wrapAsync(async (req, res) => {
-    let listing = await Listing.findById(req.params.id);
-
-    let newReview = new Review(req.body.review);
-
-    listing.reviews.push(newReview);
-    await newReview.save();
-    await listing.save();
-
-    res.redirect(`/listings/${listing._id}`);
-}));
-
-//Delete Review Route
-app.delete(
-    "/listings/:id/reviews/:reviewId",
-    wrapAsync(async (req, res) => {
-        let { id, reviewId } = req.params;
-
-        await Listing.findByIdAndUpdate(id, { $pull: { reviews: reviewId } });
-        await Review.findByIdAndDelete(reviewId);
-
-        res.redirect(`/listings/${id}`);
-    })
-);
-
-// delete route
-
-app.delete("/listings/:id/reviews/:reviewId",
-    wrapAsync(async (req, res) => {
-        let { id, reviewId } = req.params;
-
-        await Listing.findByIdAndUpdate(id, { $pull: { reviews: reviewId } });
-        await Review.findByIdAndDelete(reviewId);
-
-        res.redirect(`/listings/${id}`);
-    })
-);
+app.use("/listings",listings);
+app.use("/listings/:id/reviews",reviews);
 
 app.all("*",(req,res,next)=>{
     next(new ExpressError(404,"page not found!"));
